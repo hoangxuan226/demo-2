@@ -62,8 +62,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .securityMatcher("/**")
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**").permitAll()
-                        .requestMatchers("/api/users/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/**").permitAll()
                         .requestMatchers("/api/auth/**").anonymous()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
