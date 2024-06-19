@@ -10,6 +10,7 @@ import com.vtcorp.store.repositories.BrandRepository;
 import com.vtcorp.store.repositories.CategoryRepository;
 import com.vtcorp.store.repositories.ProductImageRepository;
 import com.vtcorp.store.repositories.ProductRepository;
+import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class ProductService {
@@ -111,6 +113,33 @@ public class ProductService {
         return product;
     }
 
+//    private List<ProductImage> handleProductImages(List<MultipartFile> imageFiles, Product product) {
+//        List<ProductImage> productImageList = new ArrayList<>();
+//        if (imageFiles != null) {
+//            Path uploadPath = Paths.get(UPLOAD_DIR);
+//            try {
+//                if (!Files.exists(uploadPath)) {
+//                    Files.createDirectories(uploadPath);
+//                }
+//                for (MultipartFile image : imageFiles) {
+//                    String storedFileName = (new Date()).getTime() + "_" + image.getOriginalFilename();
+//                    try (InputStream inputStream = image.getInputStream()) {
+//                        Files.copy(inputStream, Paths.get(UPLOAD_DIR, storedFileName), StandardCopyOption.REPLACE_EXISTING);
+//                        productImageList.add(ProductImage.builder()
+//                                .imagePath(storedFileName)
+//                                .product(product)
+//                                .build());
+//                    } catch (IOException e) {
+//                        throw new RuntimeException("Failed to save image", e);
+//                    }
+//                }
+//            } catch (Exception e) {
+//                throw new RuntimeException("Failed to create upload directory", e);
+//            }
+//        }
+//        return productImageList;
+//    }
+
     private List<ProductImage> handleProductImages(List<MultipartFile> imageFiles, Product product) {
         List<ProductImage> productImageList = new ArrayList<>();
         if (imageFiles != null) {
@@ -120,22 +149,28 @@ public class ProductService {
                     Files.createDirectories(uploadPath);
                 }
                 for (MultipartFile image : imageFiles) {
-                    String storedFileName = (new Date()).getTime() + "_" + image.getOriginalFilename();
-                    try (InputStream inputStream = image.getInputStream()) {
-                        Files.copy(inputStream, Paths.get(UPLOAD_DIR, storedFileName), StandardCopyOption.REPLACE_EXISTING);
-                        productImageList.add(ProductImage.builder()
-                                .imagePath(storedFileName)
-                                .product(product)
-                                .build());
-                    } catch (IOException e) {
-                        throw new RuntimeException("Failed to save image", e);
-                    }
+                    String storedFileName = saveImageFile(image);
+                    productImageList.add(ProductImage.builder()
+                            .imagePath(storedFileName)
+                            .product(product)
+                            .build());
                 }
             } catch (Exception e) {
-                throw new RuntimeException("Failed to create upload directory", e);
+                throw new IllegalStateException("Failed to create upload directory", e);
             }
         }
         return productImageList;
+    }
+
+    private String saveImageFile(MultipartFile image) {
+        String storedFileName = UUID.randomUUID().toString();
+        Path imagePath = Paths.get(UPLOAD_DIR, storedFileName);
+        try (InputStream inputStream = image.getInputStream()) {
+            Files.copy(inputStream, imagePath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to save image", e);
+        }
+        return storedFileName;
     }
 
     private void removeImages(List<ProductImage> images) {
